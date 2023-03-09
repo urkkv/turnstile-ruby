@@ -1,0 +1,5 @@
+nl:
+  turnstile:
+    errors:
+      verification_failed: Turnstile-verificatie mislukt, probeer het opnieuw.
+      turnstile_unreachable: Oeps, we hebben uw Turnstile-antwoord niet kunnen valideren. Probeer het opnieuw.

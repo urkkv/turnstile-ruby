@@ -1,0 +1,5 @@
+ja:
+  turnstile:
+    errors:
+      verification_failed: Turnstile認証に失敗しました。もう一度お試しください。
+      turnstile_unreachable: Turnstileのレスポンスを検証できませんでした。もう一度お試しください。

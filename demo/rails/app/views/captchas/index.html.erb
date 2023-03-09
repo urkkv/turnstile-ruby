@@ -1,0 +1,61 @@
+<% if params[:multi] %>
+  <script type="text/javascript">
+    var verifyCallback = function(response) {
+      alert(response);
+    };
+    var widgetId1;
+    var widgetId2;
+    var onloadCallback = function() {
+      // Renders the HTML element with id 'example1' as a Turnstile captcha widget.
+      // The id of the Turnstile captcha widget is assigned to 'widgetId1'.
+      widgetId1 = turnstile.render('#example1', {
+        'sitekey' : "<%= Turnstile.configuration.site_key %>",
+        'theme' : 'light'
+      });
+      widgetId2 = turnstile.render(document.getElementById('example2'), {
+        'sitekey' : "<%= Turnstile.configuration.site_key %>"
+      });
+      turnstile.render('#example3', {
+        'sitekey' : "<%= Turnstile.configuration.site_key %>",
+        'callback' : verifyCallback,
+        'theme' : 'dark'
+      });
+      turnstile.render('#example4', {
+        'sitekey' : "<%= Turnstile.configuration.site_key %>",
+        'callback' : verifyCallback,
+        'theme' : 'dark',
+        'size' : 'compact'
+      });
+    };
+  </script>
+
+  <%= form_tag "/captchas" do |f| %>
+    <div id="example1"></div>
+    <%= submit_tag %>
+  <% end %>
+  <%= form_tag "/captchas" do %>
+    <div id="example2"></div>
+    <%= submit_tag %>
+  <% end %>
+  <%= form_tag "/captchas" do %>
+    <div id="example3"></div>
+    <%= submit_tag %>
+  <% end %>
+  <%= form_tag "/captchas" do %>
+    <div id="example4"></div>
+    <%= submit_tag %>
+  <% end %>
+  <%= turnstile_tags(onload: 'onloadCallback', render: 'explicit', script_async: true, script_defer: true) %>
+<% elsif params[:invisible] %>
+  <%= form_tag "/captchas", id: "invisible-turnstile-form" do %>
+    <%= invisible_turnstile_tags text: 'Save changes' %>
+  <% end %>
+<% else %>
+  <%= form_tag "/captchas" do %>
+    <%= turnstile_tags %>
+    <%= submit_tag %>
+  <% end %>
+<% end %>
+<%= link_to 'Single ?', '?' if params[:multi] or params[:invisible] %>
+<%= link_to 'Multi ?', '?multi=1' unless params[:multi] %>
+<%= link_to 'Invisible ?', '?invisible=1' unless params[:invisible] %>

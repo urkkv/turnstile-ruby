@@ -1,0 +1,5 @@
+fr:
+  turnstile:
+    errors:
+      verification_failed: La vérification Turnstile a échoué, veuillez essayer à nouveau.
+      turnstile_unreachable: Oops, nous n'avons pas pu valider votre réponse Turnstile. Veuillez essayer à nouveau.
