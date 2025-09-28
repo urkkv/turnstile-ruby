@@ -1,7 +1,6 @@
 # Turnstile Ruby
 
 [![Gem Version](https://badge.fury.io/rb/turnstile-ruby.svg)](https://badge.fury.io/rb/turnstile-ruby)
-[![Build Status](https://github.com/urkkv/turnstile-ruby/actions/workflows/test.yml/badge.svg)](https://github.com/urkkv/turnstile-ruby/actions)
 
 A simple Ruby client for verifying [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) tokens.
 Turnstile is a CAPTCHA alternative from Cloudflare, similar to Google reCAPTCHA, but lightweight and privacy-friendly.

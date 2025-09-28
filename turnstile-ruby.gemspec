@@ -14,10 +14,11 @@ Gem::Specification.new do |spec|
 
   spec.files    = `git ls-files lib rails README.md CHANGELOG.md LICENSE`.split("\n")
 
-  spec.metadata["allowed_push_host"] = "http://github.com/urkkv/turnstile-ruby"
-  spec.metadata["homepage_uri"]      = spec.homepage
-  spec.metadata["source_code_uri"]   = "http://github.com/urkkv/turnstile-ruby"
-  spec.metadata["changelog_uri"]     = "http://github.com/urkkv/turnstile-ruby"
+  spec.metadata["allowed_push_host"]  = "http://github.com/urkkv/turnstile-ruby"
+  spec.metadata["homepage_uri"]       = spec.homepage
+  spec.metadata["source_code_uri"]    = "http://github.com/urkkv/turnstile-ruby"
+  spec.metadata["changelog_uri"]      = "http://github.com/urkkv/turnstile-ruby"
+  spec.metadata[ "allowed_push_host"] = "https://rubygems.org"
 
   spec.bindir = "exe"
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
