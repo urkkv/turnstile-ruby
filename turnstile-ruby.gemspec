@@ -7,31 +7,22 @@ Gem::Specification.new do |spec|
   spec.version  = Turnstile::VERSION
   spec.authors  = ["urkkv"]
   spec.email    = ["urkv@outlook.com"]
-  spec.summary  = spec.description = "Helper for Turnstile Captcha API"
-  spec.homepage = "http://github.com/urkkv/turnstile-ruby"
+  spec.summary  = "Cloudflare Turnstile for Ruby, Rails and Sinatra: widget helpers and token verification"
+  spec.description = "Adds Cloudflare Turnstile, the privacy-friendly CAPTCHA alternative, to Rails, Sinatra and " \
+                     "plain Ruby apps. Ships view helpers for the widget (Turbo and CSP nonce aware), controller " \
+                     "helpers and a small client for the siteverify API, with no runtime dependencies."
+  spec.homepage = "https://github.com/urkkv/turnstile-ruby"
   spec.license  = "MIT"
-  spec.required_ruby_version = ">= 2.6.0"
+  spec.required_ruby_version = ">= 2.7.0"
 
-  spec.files    = `git ls-files lib rails README.md CHANGELOG.md LICENSE`.split("\n")
-
-  spec.metadata["allowed_push_host"]  = "http://github.com/urkkv/turnstile-ruby"
-  spec.metadata["homepage_uri"]       = spec.homepage
-  spec.metadata["source_code_uri"]    = "http://github.com/urkkv/turnstile-ruby"
-  spec.metadata["changelog_uri"]      = "http://github.com/urkkv/turnstile-ruby"
-  spec.metadata[ "allowed_push_host"] = "https://rubygems.org"
-
-  spec.bindir = "exe"
-  spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
+  spec.files = Dir["lib/**/*", "rails/locales/*.yml", "sig/**/*.rbs", "README.md", "CHANGELOG.md", "LICENSE.txt"]
+               .select { |path| File.file?(path) }
   spec.require_paths = ["lib"]
 
-  spec.add_runtime_dependency "json"
-  spec.add_development_dependency "bump"
-  spec.add_development_dependency "i18n"
-  spec.add_development_dependency "maxitest"
-  spec.add_development_dependency "mocha"
-  spec.add_development_dependency "pry-byebug"
-  spec.add_development_dependency "rake"
-  spec.add_development_dependency "rspec"
-  spec.add_development_dependency "rubocop"
-  spec.add_development_dependency "webmock"
+  spec.metadata["allowed_push_host"] = "https://rubygems.org"
+  spec.metadata["homepage_uri"]      = spec.homepage
+  spec.metadata["source_code_uri"]   = "#{spec.homepage}/tree/master"
+  spec.metadata["changelog_uri"]     = "#{spec.homepage}/blob/master/CHANGELOG.md"
+  spec.metadata["bug_tracker_uri"]   = "#{spec.homepage}/issues"
+  spec.metadata["documentation_uri"] = "https://www.rubydoc.info/gems/turnstile-ruby"
 end

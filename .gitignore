@@ -10,3 +10,11 @@
 
 # rspec failure tracking
 .rspec_status
+
+# gems are tested against whatever resolves on each Ruby
+Gemfile.lock
+/demo/**/Gemfile.lock
+
+# editor / tooling state
+/.ruby-lsp/
+*.gem

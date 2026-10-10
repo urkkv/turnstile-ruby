@@ -25,30 +25,36 @@ module Turnstile
   # Setting the keys with this Configuration
   #
   #   Turnstile.configure do |config|
-  #     config.site_key  = '0x4AAAAAAAC1z764FTJAewGm'
-  #     config.secret_key = '0x4AAAAAAAC1z_XZkOcOamwjRONkb-xoXMU'
+  #     config.site_key   = ENV["TURNSTILE_SITE_KEY"]
+  #     config.secret_key = ENV["TURNSTILE_SECRET_KEY"]
   #   end
   #
   class Configuration
     DEFAULTS = {
-      'server_url' => 'https://challenges.cloudflare.com/turnstile/v0/api.js',
-      'verify_url' => 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+      "server_url" => "https://challenges.cloudflare.com/turnstile/v0/api.js",
+      "verify_url" => "https://challenges.cloudflare.com/turnstile/v0/siteverify"
     }.freeze
 
     attr_accessor :default_env, :skip_verify_env, :proxy, :secret_key, :site_key, :handle_timeouts_gracefully,
-                  :hostname, :response_limit
+                  :hostname, :response_limit, :timeout, :turbo
     attr_writer :api_server_url, :verify_url
 
     def initialize # :nodoc:
-      @default_env = ENV['RAILS_ENV'] || ENV['RACK_ENV'] || (Rails.env if defined? Rails.env)
+      @default_env = ENV["RAILS_ENV"] || ENV["RACK_ENV"] || (Rails.env if defined? Rails.env)
       @skip_verify_env = %w[test cucumber rspec]
       @handle_timeouts_gracefully = true
 
-      @secret_key = ENV['TURNSTILE_SECRET_KEY']
-      @site_key = ENV['TURNSTILE_SITE_KEY']
+      @secret_key = ENV["TURNSTILE_SECRET_KEY"]
+      @site_key = ENV["TURNSTILE_SITE_KEY"]
 
-      @verify_url = ENV['TURNSTILE_VERIFY_URL']
-      @api_server_url = ENV['TURNSTILE_SERVER_URL']
+      @verify_url = ENV["TURNSTILE_VERIFY_URL"]
+      @api_server_url = ENV["TURNSTILE_SERVER_URL"]
+
+      # Seconds to wait for Cloudflare when verifying a token.
+      @timeout = Turnstile::DEFAULT_TIMEOUT
+
+      # Render widgets again after Turbo (Hotwire) navigations.
+      @turbo = true
 
       # Default response token size
       # https://developers.cloudflare.com/turnstile/frequently-asked-questions/#what-is-the-length-of-a-turnstile-token
@@ -64,11 +70,11 @@ module Turnstile
     end
 
     def api_server_url
-      @api_server_url || DEFAULTS.fetch('server_url')
+      @api_server_url || DEFAULTS.fetch("server_url")
     end
 
     def verify_url
-      @verify_url || DEFAULTS.fetch('verify_url')
+      @verify_url || DEFAULTS.fetch("verify_url")
     end
   end
 end

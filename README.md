@@ -1,21 +1,26 @@
 # Turnstile Ruby
 
 [![Gem Version](https://badge.fury.io/rb/turnstile-ruby.svg)](https://badge.fury.io/rb/turnstile-ruby)
+[![CI](https://github.com/urkkv/turnstile-ruby/actions/workflows/main.yml/badge.svg)](https://github.com/urkkv/turnstile-ruby/actions/workflows/main.yml)
 
-A simple Ruby client for verifying [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) tokens.
+[Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) for Ruby: view helpers for the widget, controller
+helpers for verification, and a small client for the siteverify API.
 Turnstile is a CAPTCHA alternative from Cloudflare, similar to Google reCAPTCHA, but lightweight and privacy-friendly.
 
-This gem makes it easy to integrate Turnstile into Ruby and Rails applications.
+It works in **Rails, Sinatra, any Rack app and plain Ruby**, and has no runtime dependencies.
 
 ---
 
 ## ✨ Features
 
-- Verify Turnstile tokens with Cloudflare’s API
-- Lightweight, no heavy dependencies
-- Works with plain Ruby and Ruby on Rails
-- Provides meaningful error codes and success flags
-- Simple configuration via environment variables or initializer
+- `turnstile_tags` and `verify_turnstile` helpers, added to Rails automatically
+- `Turnstile.verify` for jobs, APIs, Sinatra and plain Ruby, returning error codes and the reply details
+- Works with Turbo (Hotwire): widgets keep rendering across Turbo visits
+- CSP friendly: script tags carry your nonce, picked up from Rails automatically
+- Invisible flow that runs the challenge when the form is submitted
+- Translated error messages (en, fr, ja, nl), written to the flash or your model's errors
+- Test helpers to stub passing and failing verifications
+- No runtime dependencies, Ruby 2.7+
 
 ---
 
@@ -33,81 +38,166 @@ And install:
 bundle install
 ```
 
-Or install directly with:
-
-```bash
-gem install turnstile-ruby
-```
-
 ---
 
 ## ⚙️ Configuration
 
-Set your **Cloudflare Turnstile Site Key** and **Secret Key** in environment variables:
+Get a site key and a secret key from the [Cloudflare dashboard](https://dash.cloudflare.com/?to=/:account/turnstile)
+and set them in the environment:
 
 ```bash
 export TURNSTILE_SITE_KEY="your_site_key"
 export TURNSTILE_SECRET_KEY="your_secret_key"
 ```
 
-For Rails, you can create an initializer (`config/initializers/turnstile.rb`):
+Or configure them in code, for Rails in `config/initializers/turnstile.rb`:
 
 ```ruby
 Turnstile.configure do |config|
   config.site_key   = ENV["TURNSTILE_SITE_KEY"]
   config.secret_key = ENV["TURNSTILE_SECRET_KEY"]
-  config.timeout    = 5 # optional, in seconds
+  config.timeout    = 5 # optional, seconds to wait for Cloudflare (default 3)
 end
 ```
+
+| Option | Default | |
+|---|---|---|
+| `site_key`, `secret_key` | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Your keys |
+| `timeout` | `3` | Seconds to wait for Cloudflare when verifying |
+| `skip_verify_env` | `["test", "cucumber", "rspec"]` | Environments where verification always passes |
+| `handle_timeouts_gracefully` | `true` | Fail verification with a message when Cloudflare is unreachable, instead of raising |
+| `hostname` | `nil` | A string or callable the reply's hostname has to match |
+| `turbo` | `true` | Render widgets again after Turbo visits |
+| `proxy` | `nil` | HTTP proxy URL for the verification request |
+| `response_limit` | `2048` | Maximum accepted token length |
+
+For local development Cloudflare has [dummy keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/)
+that work on any host: site key `1x00000000000000000000AA` with secret key `1x0000000000000000000000000000000AA`
+always passes.
 
 ---
 
 ## 🛠 Usage
 
-### Rails Views
+### Rails
 
-Embed the Turnstile widget:
+Add the widget to a form:
 
 ```erb
-<form action="/signup" method="POST">
-  <!-- Your form fields -->
-
-  <div class="cf-turnstile"
-       data-sitekey="<%= Turnstile.site_key %>">
-  </div>
-
-  <button type="submit">Submit</button>
-</form>
-
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<%= form_with model: @user do |form| %>
+  <%= form.text_field :email %>
+  <%= turnstile_tags %>
+  <%= form.submit %>
+<% end %>
 ```
 
-### Rails Controller
-
-Verify the token on form submission:
+And verify it in the controller:
 
 ```ruby
 def create
-  token = params["cf-turnstile-response"]
+  @user = User.new(user_params)
 
-  result = Turnstile.verify(token, remote_ip: request.remote_ip)
-
-  if result.success?
-    # proceed with signup
+  if verify_turnstile(model: @user) && @user.save
+    redirect_to @user
   else
-    flash[:error] = "Turnstile verification failed: #{result.error_codes.join(", ")}"
-    render :new
+    render :new, status: :unprocessable_entity
   end
 end
 ```
 
-### Plain Ruby Example
+`verify_turnstile` returns `true` or `false`. On failure it adds an error to the model, or sets
+`flash[:turnstile_error]` when no model is given. A missing token fails verification, it does not raise.
+
+| Option | |
+|---|---|
+| `model:` | Record that gets the error message |
+| `attribute:` | Attribute for the error, `:base` by default |
+| `message:` | Custom error message |
+| `action:` / `hostname:` | Fail unless the reply matches |
+| `timeout:` | Seconds to wait, overriding the configuration |
+| `secret_key:` | Secret key for this call |
+| `response:` | Token to verify, `params["cf-turnstile-response"]` by default |
+| `skip_remote_ip: true` | Do not send the visitor's IP to Cloudflare |
+
+`verify_turnstile!` raises `Turnstile::VerifyError` instead of returning `false`, and `turnstile_reply` gives you
+Cloudflare's raw reply afterwards.
+
+### Widget options
+
+`turnstile_tags` accepts the
+[widget configuration](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/)
+in snake_case, and passes anything else through as HTML attributes:
+
+```erb
+<%= turnstile_tags theme: "dark", size: "flexible", action: "signup", appearance: "interaction-only", class: "mt-4" %>
+```
+
+`action`, `cdata`, `theme`, `language`, `size`, `appearance`, `execution`, `tabindex`, `retry`, `retry_interval`,
+`refresh_expired`, `refresh_timeout`, `response_field`, `response_field_name`, `feedback_enabled`,
+`offlabel_show_privacy`, `offlabel_show_help`, `callback`, `error_callback`, `expired_callback`, `timeout_callback`,
+`before_interactive_callback`, `after_interactive_callback` and `unsupported_callback` are supported.
+
+| Helper option | |
+|---|---|
+| `site_key:` | Site key for this widget |
+| `nonce:` | CSP nonce for the script tags (automatic in Rails) |
+| `turbo: false` | Leave out the Turbo support script |
+| `script: false` | Render no script tags, for when you load `api.js` yourself |
+| `onload:`, `render:` | Query parameters for `api.js`, for [explicit rendering](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicit-rendering) |
+| `script_async: false`, `script_defer: false` | Drop `async` / `defer` from the script tag |
+
+### Turbo
+
+Nothing to set up. `api.js` only scans the page once, so with Turbo Drive a widget would stay empty after the first
+visit. `turnstile_tags` therefore includes a small inline script that renders widgets after Turbo visits, frame
+renders and cache restores. If your Content Security Policy blocks inline scripts and you pass no nonce, the widget
+still works on full page loads.
+
+### Content Security Policy
+
+Allow `https://challenges.cloudflare.com` in `script-src` and `frame-src`. In Rails the helpers add your
+`content_security_policy_nonce` to their script tags; elsewhere pass `nonce:` yourself.
+
+### Invisible flow
+
+```erb
+<%= form_with url: signup_path do |form| %>
+  <%= form.text_field :email %>
+  <%= invisible_turnstile_tags text: "Sign up", class: "btn" %>
+<% end %>
+```
+
+This renders a submit button and a widget that stays hidden unless Cloudflare needs the visitor to interact. The
+challenge runs when the form is submitted, and the form is sent once the token arrives. Pass `ui: :input` for an
+`<input type="submit">`, or `callback: "myFunction"` to receive the token yourself instead of submitting the form.
+
+### Sinatra
+
+```ruby
+require "sinatra"
+require "turnstile"
+
+helpers Turnstile::Adapters::ViewMethods, Turnstile::Adapters::ControllerMethods
+
+get "/" do
+  %(<form action="/verify" method="post">#{turnstile_tags}<button>Submit</button></form>)
+end
+
+post "/verify" do
+  verify_turnstile ? "Verified" : halt(422, "Verification failed")
+end
+```
+
+There is a runnable version in [`demo/sinatra`](demo/sinatra).
+
+### Plain Ruby
+
+`Turnstile.verify` works anywhere: API endpoints, background jobs, other frameworks.
 
 ```ruby
 require "turnstile"
 
-token = "client-submitted-token"
-result = Turnstile.verify(token)
+result = Turnstile.verify(token, remote_ip: request.ip)
 
 if result.success?
   puts "Verification passed!"
@@ -116,16 +206,38 @@ else
 end
 ```
 
+It returns a `Turnstile::Response`:
+
+- `success?` → `true` or `false`
+- `error_codes` → Cloudflare's [error codes](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#error-codes),
+  plus `hostname-mismatch` / `action-mismatch` when you asked to validate those
+- `hostname`, `action`, `cdata`, `challenge_ts`, `metadata` → details of the challenge
+- `to_h` → the raw reply
+
+Options: `remote_ip:`, `secret_key:`, `timeout:`, `hostname:`, `action:` and `idempotency_key:`.
+
+A missing token returns a failed response without calling Cloudflare. Unlike `verify_turnstile`, this method does
+not skip the test environment, and it raises `Timeout::Error` or `Turnstile::UnreachableError` when Cloudflare
+cannot be reached.
+
 ---
 
-## ✅ Response Object
+## 🧪 Testing your app
 
-`Turnstile.verify` returns a `Turnstile::Response` object with:
+In the `test` environment `verify_turnstile` always passes and `turnstile_tags` renders an empty container, so your
+tests never call Cloudflare. To test what happens when verification fails:
 
-- `success?` → `true` or `false`  
-- `error_codes` → array of error codes  
-- `hostname` → hostname (if provided)  
-- `challenge_ts` → challenge timestamp (if provided)  
+```ruby
+require "turnstile/testing"
+
+Turnstile::Testing.with_failure do
+  post signups_path, params: { user: { email: "a@example.com" } }
+  expect(response).to have_http_status(:unprocessable_entity)
+end
+```
+
+`Turnstile::Testing.success!`, `failure!("timeout-or-duplicate")` and `reset!` do the same without a block; call
+`reset!` after each test when you use them.
 
 ---
 
@@ -139,28 +251,29 @@ cd turnstile-ruby
 bundle install
 ```
 
-Run tests:
+Run the specs and RuboCop:
 
 ```bash
-bundle exec rspec
+bundle exec rake
 ```
 
 ---
 
 ## 📜 License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE.txt).
 
 ---
 
 ## 🙌 Contributing
 
-Bug reports and pull requests are welcome at  
+Bug reports and pull requests are welcome at
 [https://github.com/urkkv/turnstile-ruby](https://github.com/urkkv/turnstile-ruby).
 
 ---
 
 ## 🔗 Resources
 
-- [Cloudflare Turnstile Documentation](https://developers.cloudflare.com/turnstile/)  
-- [RubyGems.org – turnstile-ruby](https://rubygems.org/gems/turnstile-ruby)  
+- [Cloudflare Turnstile Documentation](https://developers.cloudflare.com/turnstile/)
+- [RubyGems.org – turnstile-ruby](https://rubygems.org/gems/turnstile-ruby)
+- [Changelog](CHANGELOG.md)

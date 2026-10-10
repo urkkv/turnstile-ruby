@@ -1,4 +1,68 @@
 module Turnstile
   VERSION: String
-  # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+  DEFAULT_TIMEOUT: Integer
+
+  class TurnstileError < StandardError
+  end
+
+  class VerifyError < TurnstileError
+  end
+
+  class UnreachableError < TurnstileError
+  end
+
+  attr_accessor self.stubbed_response: Response?
+
+  def self.configuration: () -> Configuration
+  def self.configure: () { (Configuration) -> void } -> void
+  def self.with_configuration: (Hash[Symbol, untyped] config) ?{ () -> void } -> void
+  def self.site_key: () -> String?
+  def self.secret_key: () -> String?
+  def self.skip_env?: (String? env) -> bool
+  def self.verify: (untyped token, ?Hash[Symbol, untyped] options) -> Response
+  def self.verify_via_api_call: (untyped response, Hash[Symbol, untyped] options) -> (bool | [bool, Hash[String, untyped]])
+
+  class Configuration
+    attr_accessor default_env: String?
+    attr_accessor skip_verify_env: Array[String]
+    attr_accessor proxy: String?
+    attr_accessor secret_key: String?
+    attr_accessor site_key: String?
+    attr_accessor handle_timeouts_gracefully: bool
+    attr_accessor hostname: (String | ^(String?) -> boolish)?
+    attr_accessor response_limit: Integer
+    attr_accessor timeout: Numeric
+    attr_accessor turbo: bool
+    attr_accessor api_server_url: String
+    attr_accessor verify_url: String
+
+    def secret_key!: () -> String
+    def site_key!: () -> String
+  end
+
+  class Response
+    def initialize: (Hash[String, untyped] reply, ?extra_errors: Array[String]) -> void
+    def success?: () -> bool
+    def error_codes: () -> Array[String]
+    def hostname: () -> String?
+    def action: () -> String?
+    def cdata: () -> String?
+    def challenge_ts: () -> String?
+    def metadata: () -> Hash[String, untyped]
+    def to_h: () -> Hash[String, untyped]
+  end
+
+  module Helpers
+    def self.turnstile_tags: (?Hash[Symbol, untyped] options) -> String
+    def self.invisible_turnstile_tags: (?Hash[Symbol, untyped] options) -> String
+    def self.to_error_message: (Symbol key) -> String
+  end
+
+  module Testing
+    def self.success!: (?Hash[String, untyped] reply) -> Response
+    def self.failure!: (*String error_codes) -> Response
+    def self.reset!: () -> nil
+    def self.with_success: (?Hash[String, untyped] reply) { () -> untyped } -> untyped
+    def self.with_failure: (*String error_codes) { () -> untyped } -> untyped
+  end
 end
